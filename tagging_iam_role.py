@@ -29,8 +29,8 @@ class AWSTagging:
 					RoleName=role,
 					Tags=[
 						{
-							'Key': tag_component['key'],
-							'Value': tag_component['value']
+							'Key': tag_component['Key'],
+							'Value': tag_component['Value']
 						},
 					]
 				)
