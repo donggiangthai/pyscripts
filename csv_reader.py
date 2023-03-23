@@ -6,11 +6,13 @@ import argparse
 parser = argparse.ArgumentParser(description='CSV Reader', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument(
 	'-f', '--file-name',
+	required=False,
 	type=str,
 	help=''
 )
 parser.add_argument(
 	'-a', '--accounts-detail-file',
+	required=False,
 	type=str,
 	help=''
 )
@@ -81,10 +83,9 @@ class CSVReader:
 			path = fr"{os.getcwd()}\{self.file_name}"
 			with open(file=path, newline='') as csv_file:
 				csv_reader = csv.reader(csv_file)
+				lines = list(csv_reader)
 		except Exception as error:
 			raise error
-		else:
-			lines = list(csv_reader)
 		# Getting index of each column in line
 		account_number_index: int = 0
 		accounts_detail: dict = dict()
@@ -164,10 +165,9 @@ class CSVReader:
 		try:
 			with open(file=path, newline='') as csv_file:
 				csv_reader = csv.reader(csv_file)
+				iam_roles = list(csv_reader)
 		except Exception as error:
 			raise error
-		else:
-			iam_roles = list(csv_reader)
 		arn_index = iam_roles[0].index('arn')
 		for line in iam_roles:
 			if line[arn_index] == 'arn':
@@ -180,5 +180,3 @@ class CSVReader:
 if __name__ == '__main__':
 	print('Hello from Thai')
 	reader = CSVReader()
-	accounts_data = reader.get_account_data()
-	print(json.dumps(accounts_data, indent=4, default=str))
