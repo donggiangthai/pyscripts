@@ -95,6 +95,7 @@ class CSVReader:
 		resource_type_index: int = lines[0].index('resourceType')
 		arn_index: int = lines[0].index('arn')
 		region_index: int = lines[0].index('region')
+		tags_index: int = lines[0].index('tags')
 
 		account_name = 'Account Name'
 
@@ -104,8 +105,9 @@ class CSVReader:
 			if item[resource_type_index] == 'resourceType':
 				# Skip first line which is the column name
 				continue
+			account_number: str = ""
 			if accounts_detail:
-				account_number = item[account_number_index]
+				account_number = str(item[account_number_index])
 				try:
 					# Mapping account name with account number
 					account_name = accounts_detail[account_number]['Account Name']
@@ -116,6 +118,7 @@ class CSVReader:
 			if account_name not in filter_dict.keys():
 				filter_dict[account_name] = dict()
 				filter_dict[account_name]['Total Resources'] = 0
+				filter_dict[account_name]['Account Number'] = account_number
 			resource_type = item[resource_type_index]
 			filter_dict[account_name][resource_type] = dict()
 
@@ -133,9 +136,11 @@ class CSVReader:
 			arn = item[arn_index]
 			region = item[region_index]
 			resource_type = item[resource_type_index]
+			tags = json.loads(item[tags_index])
 			resource_detail = {
 				"arn": arn,
-				"region": region
+				"region": region,
+				"tags": tags
 			}
 			if accounts_detail:
 				account_number = item[account_number_index]
