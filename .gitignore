@@ -8,3 +8,5 @@ IAM_role/
 .idea/
 .run/
 csv/
+# Not include CSV schema
+!**.csvs
