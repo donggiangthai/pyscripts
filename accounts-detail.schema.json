@@ -1,0 +1,109 @@
+{
+	"$schema": "https://json-schema.org/draft/2019-09/schema",
+	"$id": "http://example.com/example.json",
+	"type": "object",
+	"default": {},
+	"title": "Accounts Detail Schema",
+	"properties": {
+		"Account Id1": {
+			"type": "object",
+			"default": {},
+			"title": "The Account Id Number",
+			"required": [
+				"Account Name",
+				"Key Tag",
+				"Value Tag"
+			],
+			"properties": {
+				"Account Name": {
+					"type": "string",
+					"default": "",
+					"title": "The Account Name Schema",
+					"examples": [
+						"AWS profile name related to account id 1"
+					]
+				},
+				"Key Tag": {
+					"type": "string",
+					"default": "",
+					"title": "The Key Tag Schema",
+					"examples": [
+						"ci-id"
+					]
+				},
+				"Value Tag": {
+					"type": "string",
+					"default": "",
+					"title": "The Value Tag Schema",
+					"examples": [
+						"CI..."
+					]
+				}
+			},
+			"examples": [
+				{
+					"Account Name": "AWS profile name related to account id 1",
+					"Key Tag": "ci-id",
+					"Value Tag": "CI..."
+				}
+			]
+		},
+		"Account Id2": {
+			"type": "object",
+			"default": {},
+			"title": "The Account Id2 Schema",
+			"required": [
+				"Account Name",
+				"Key Tag",
+				"Value Tag"
+			],
+			"properties": {
+				"Account Name": {
+					"type": "string",
+					"default": "",
+					"title": "The Account Name Schema",
+					"examples": [
+						"AWS profile name related to account id 2"
+					]
+				},
+				"Key Tag": {
+					"type": "string",
+					"default": "",
+					"title": "The Key Tag Schema",
+					"examples": [
+						"ci-id"
+					]
+				},
+				"Value Tag": {
+					"type": "string",
+					"default": "",
+					"title": "The Value Tag Schema",
+					"examples": [
+						"CI..."
+					]
+				}
+			},
+			"examples": [
+				{
+					"Account Name": "AWS profile name related to account id 2",
+					"Key Tag": "ci-id",
+					"Value Tag": "CI..."
+				}
+			]
+		}
+	},
+	"examples": [
+		{
+			"03..030..30": {
+				"Account Name": "AWS profile name related to account id 1",
+				"Key Tag": "ci-id",
+				"Value Tag": "CI..."
+			},
+			"73..737..37": {
+				"Account Name": "AWS profile name related to account id 2",
+				"Key Tag": "ci-id",
+				"Value Tag": "CI..."
+			}
+		}
+	]
+}
