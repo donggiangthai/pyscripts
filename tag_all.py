@@ -12,6 +12,8 @@ class AWSTagger:
 	_key_tag: str = ''
 	_value_tag: str = ''
 	_tagged: dict = dict()
+	_output_detail_file_name: str = ''
+	_result_file_name: str = ''
 
 	def __init__(
 			self,
@@ -19,8 +21,8 @@ class AWSTagger:
 			result_file_name: str = ''
 	):
 		self.set_up()
-		self._output_detail_file_name: str = output_detail_file_name
-		self._result_file_name: str = result_file_name
+		self._output_detail_file_name = output_detail_file_name
+		self._result_file_name = result_file_name
 
 	@property
 	def key_tag(self) -> str:
@@ -75,6 +77,7 @@ class AWSTagger:
 	def service_tag_function(
 			self,
 			service_name: str,
+			service_type: str,
 			region: str,
 			arn: str,
 			existing_tags: dict
@@ -82,6 +85,7 @@ class AWSTagger:
 		if not service_name:
 			raise ValueError("Missing service name")
 		service_name = service_name.lower()
+		service_type = service_type.lower()
 		if service_name == 'ElasticLoadBalancingV2'.lower():
 			service_name = 'elbv2'
 		if service_name == 'ElasticLoadBalancing'.lower():
@@ -90,6 +94,8 @@ class AWSTagger:
 		resource_id: str = arn.rsplit(":")[-1].rsplit("/")[-1]
 		tags: list = list()
 		for key, value in existing_tags.items():
+			if "aws:" in key:
+				continue
 			existing_tag = {
 				'Key': key,
 				'Value': value
@@ -111,12 +117,20 @@ class AWSTagger:
 			)
 			return tags_return
 		if service_name == 'iam':
-			role = resource_id
-			client.tag_role(
-				RoleName=role,
-				Tags=tags
-			)
-			return tags_return
+			if service_type == 'role':
+				role = resource_id
+				client.tag_role(
+					RoleName=role,
+					Tags=tags
+				)
+				return tags_return
+			if service_type == 'user':
+				user_name = resource_id
+				client.tag_user(
+					UserName=user_name,
+					Tags=tags
+				)
+				return tags_return
 		if service_name == 'acm':
 			client.add_tags_to_certificate(
 				CertificateArn=arn,
@@ -136,6 +150,8 @@ class AWSTagger:
 		if service_name == 'autoscaling':
 			auto_scaling_tags = list()
 			for key, value in existing_tags.items():
+				if "aws:" in key:
+					continue
 				tag = {
 					'ResourceId': resource_id,
 					'ResourceType': 'auto-scaling-group',
@@ -212,6 +228,8 @@ class AWSTagger:
 		if service_name == 'lambda':
 			lambda_tags: dict = dict()
 			for key, value in existing_tags.items():
+				if "aws:" in key:
+					continue
 				lambda_tags[key] = value
 			lambda_tags[self._key_tag] = self._value_tag
 			client.tag_resource(
@@ -283,10 +301,59 @@ class AWSTagger:
 				Tags=tags
 			)
 			return tags_return
+		if service_name == 'cloudfront':
+			client.tag_resource(
+				Resource=arn,
+				Tags={
+					'Items': tags
+				}
+			)
+			return tags_return
+		if service_name == 'cloudtrail':
+			client.add_tags(
+				ResourceId=arn,
+				TagsList=tags
+			)
+			return tags_return
+		if service_name == 'ecs':
+			ecs_tags = list()
+			for key, value in existing_tags.items():
+				ecs_tags.append({
+					'key': key,
+					'value': value
+				})
+			ecs_tags.append({
+				'key': self._key_tag,
+				'value': self._value_tag
+			})
+			ecs_tags_return: dict = dict()
+			for item in ecs_tags:
+				ecs_tags_return[item['key']] = item['value']
+			client.tag_resource(
+				resourceArn=arn,
+				tags=ecs_tags
+			)
+			return ecs_tags_return
+		if service_name == 'events':
+			client.tag_resource(
+				ResourceARN=arn,
+				Tags=tags
+			)
+			return tags_return
+		if service_name == 'glue':
+			glue_tags: dict = dict()
+			for key, value in existing_tags.items():
+				glue_tags[key] = value
+			glue_tags[self._key_tag] = self._value_tag
+			client.tag_resource(
+				ResourceArn=arn,
+				TagsToAdd=glue_tags
+			)
+			return glue_tags
 
 		raise NameError("Service was not defined")
 
-	def tag_resources(self):
+	def tag_resources(self, tagged_cache: dict = None):
 		for account_name, account_detail in self._detail_data.items():
 			print(f"Working with {account_name}")
 			self.aws_session = account_name
@@ -307,10 +374,15 @@ class AWSTagger:
 				tagged_resources["Failure"] = dict()
 				tagged_resources["Failure"]["Error"] = dict()
 				for resource_detail in account_detail[resource_type]["resourceDetail"]:
+					if tagged_cache:
+						if resource_detail['arn'] in tagged_cache[account_name][resource_type]:
+							print(f"\tResource {resource_detail['arn']} already tagged.")
+							continue
 					try:
 						print(f"\tTry to tag resource: {resource_detail['arn']}")
 						tagged = self.service_tag_function(
 							service_name=resource_type.rsplit("::")[1],
+							service_type=resource_type.rsplit("::")[2],
 							arn=resource_detail['arn'],
 							region=resource_detail['region'],
 							existing_tags=resource_detail['tags']
@@ -339,6 +411,36 @@ class AWSTagger:
 				self._tagged[account_name][resource_type] = tagged_resources
 		return self._tagged
 
+	def tag_cache(self) -> dict:
+		tagged = None
+		if self.result_file_name:
+			path = fr"{os.getcwd()}\{self.result_file_name}"
+			with open(file=path, mode="r") as fd:
+				json_data = fd.read()
+			if json_data:
+				tagged = json.loads(json_data)
+		tagged_cache = None
+		with open(file="tagged_cache.json", mode='r') as fd:
+			json_cache = fd.read()
+		if json_cache:
+			tagged_cache = json.loads(json_cache)
+		if tagged:
+			for account_name in tagged.keys():
+				if account_name not in tagged_cache.keys():
+					tagged_cache[account_name] = dict()
+				for resource_type in tagged[account_name].keys():
+					if "AWS::" not in resource_type:
+						continue
+					if resource_type not in tagged_cache[account_name].keys():
+						tagged_cache[account_name][resource_type] = list()
+					success_resources = tagged[account_name][resource_type]["Success"]["Resources"]
+					for item in success_resources:
+						if item['arn'] not in tagged_cache[account_name][resource_type]:
+							tagged_cache[account_name][resource_type].append(item['arn'])
+			with open(file="tagged_cache.json", mode='w') as fd:
+				fd.write(json.dumps(tagged_cache, indent=4, default=str))
+		return tagged_cache
+
 	def tag_all(self, result_file_name: str = '') -> None:
 		if result_file_name:
 			self.result_file_name = result_file_name
@@ -346,7 +448,9 @@ class AWSTagger:
 			self.result_file_name = 'tagged-result.json'
 		path = fr"{os.getcwd()}\{self.result_file_name}"
 		with open(file=path, mode="w") as result:
-			result.write(json.dumps(self.tag_resources(), indent=4))
+			result.write(json.dumps(self.tag_resources(tagged_cache=self.tag_cache()), indent=4))
+		# Cache all tagged.
+		self.tag_cache()
 
 
 if __name__ == "__main__":
