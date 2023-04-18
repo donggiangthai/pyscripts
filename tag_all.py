@@ -420,25 +420,27 @@ class AWSTagger:
 			if json_data:
 				tagged = json.loads(json_data)
 		tagged_cache = None
-		with open(file="tagged_cache.json", mode='r') as fd:
-			json_cache = fd.read()
-		if json_cache:
-			tagged_cache = json.loads(json_cache)
-		if tagged:
-			for account_name in tagged.keys():
-				if account_name not in tagged_cache.keys():
-					tagged_cache[account_name] = dict()
-				for resource_type in tagged[account_name].keys():
-					if "AWS::" not in resource_type:
-						continue
-					if resource_type not in tagged_cache[account_name].keys():
-						tagged_cache[account_name][resource_type] = list()
-					success_resources = tagged[account_name][resource_type]["Success"]["Resources"]
-					for item in success_resources:
-						if item['arn'] not in tagged_cache[account_name][resource_type]:
-							tagged_cache[account_name][resource_type].append(item['arn'])
-			with open(file="tagged_cache.json", mode='w') as fd:
-				fd.write(json.dumps(tagged_cache, indent=4, default=str))
+		tagged_cache_path = './tagged_cache.json'
+		if os.path.isfile(tagged_cache_path):
+			with open(file=tagged_cache_path, mode='r') as fd:
+				json_cache = fd.read()
+			if json_cache:
+				tagged_cache = json.loads(json_cache)
+			if tagged:
+				for account_name in tagged.keys():
+					if account_name not in tagged_cache.keys():
+						tagged_cache[account_name] = dict()
+					for resource_type in tagged[account_name].keys():
+						if "AWS::" not in resource_type:
+							continue
+						if resource_type not in tagged_cache[account_name].keys():
+							tagged_cache[account_name][resource_type] = list()
+						success_resources = tagged[account_name][resource_type]["Success"]["Resources"]
+						for item in success_resources:
+							if item['arn'] not in tagged_cache[account_name][resource_type]:
+								tagged_cache[account_name][resource_type].append(item['arn'])
+				with open(file="tagged_cache.json", mode='w') as fd:
+					fd.write(json.dumps(tagged_cache, indent=4, default=str))
 		return tagged_cache
 
 	def tag_all(self, result_file_name: str = '') -> None:
